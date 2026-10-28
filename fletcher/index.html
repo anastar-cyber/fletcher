@@ -33,6 +33,7 @@
         </button>
         <div class="menu" id="menu" role="menu" hidden>
           <button role="menuitem" id="profile-btn" hidden>Your profile</button>
+          <button role="menuitem" id="demo-btn" hidden>Watch the demo</button>
           <button role="menuitem" id="restart-btn">Start over</button>
         </div>
       </div>
@@ -75,6 +76,18 @@
       <div class="sheet__body" id="sheet-body"></div>
       <div class="sheet__foot" id="sheet-foot"></div>
       <input type="file" id="sheet-file" accept="image/*" hidden />
+    </div>
+
+    <div class="sheet demo" id="demo" role="dialog" aria-modal="true" aria-labelledby="demo-title" hidden>
+      <div class="sheet__bar">
+        <button class="icon-btn" id="demo-close" type="button" aria-label="Close demo">
+          <svg class="icon-stroke" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <h2 class="sheet__title" id="demo-title">Fletcher meets Fletcher</h2>
+        <span class="sheet__spacer"></span>
+      </div>
+      <div class="sheet__body demo__body" id="demo-body"></div>
+      <div class="sheet__foot" id="demo-foot"></div>
     </div>
 
     <div class="flyoff" id="flyoff" aria-hidden="true"></div>

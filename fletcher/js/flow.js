@@ -221,6 +221,8 @@ export const wrapUp = (p) => [`All done, ${first(p)}!`, 'Last step: choose what 
 export const afterSendOff = () => [
   'Off I go!',
   'Heads up: matching isn’t live yet. You’re early! I’ve saved everything and I’ll start the moment it opens.',
+  'Want a sneak peek? Here’s how I’ll talk to other Fletchers.',
+  { type: 'demo' },
   'Quick favor: how was this, 1 to 5?',
 ];
 
@@ -254,12 +256,12 @@ export const FIELDS = [
 
 export const firstName = first;
 
-const sentence = (s) => {
+export const sentence = (s) => {
   const t = s.trim().replace(/[.!?…]+$/, '');
   return t ? t[0].toLowerCase() + t.slice(1) : t;
 };
 
-function lookingLine(a) {
+export function lookingLine(a) {
   if (has(a, 'friend')) return 'Here to make new friends.';
   if (has(a, 'serious', 'relationship', 'long', 'partner', 'marri', 'commit', 'the one')) return 'Looking for something real.';
   if (has(a, 'casual', 'fun', 'nothing serious', 'hook')) return 'Keeping things light for now.';

@@ -21,6 +21,7 @@ import {
   modeFor,
 } from './flow.js';
 import { RESPONSES_URL } from './config.js';
+import { buildDemo } from './demo.js';
 import { processPhoto, putPhoto, photoURL, deletePhoto, clearPhotos } from './photos.js';
 
 const STORAGE_KEY = 'fletcher.onboarding.v2';
@@ -113,6 +114,21 @@ function renderMessage(msg, animate) {
     frame.className = 'photo-frame';
     frame.appendChild(photoImg(msg.photoId));
     el.appendChild(frame);
+  } else if (msg.type === 'demo') {
+    el.classList.add('msg--card');
+    el.innerHTML = `
+      <article class="demo-card">
+        <div class="demo-card__pair" aria-hidden="true">
+          <div class="avatar avatar--xs">${cupidSVG()}</div>
+          <div class="avatar avatar--xs avatar--alt">${cupidSVG()}</div>
+        </div>
+        <div class="demo-card__text">
+          <div class="review-card__title">Fletcher meets Fletcher</div>
+          <div class="review-card__sub">A sample conversation with a made-up match.</div>
+        </div>
+        <button class="review-card__btn" type="button">Watch the demo</button>
+      </article>`;
+    el.querySelector('button').addEventListener('click', openDemo);
   } else if (msg.type === 'review') {
     el.classList.add('msg--card');
     el.innerHTML = '<article class="review-card"></article>';
@@ -233,6 +249,7 @@ function syncComposer() {
     busy ? 'typing…' : state.phase === 'sent' ? 'On standby · network opening soon' : 'Your personal cupid';
   status.classList.toggle('is-standby', state.phase === 'sent' && !busy);
   $('#profile-btn').hidden = state.phase === 'onboarding';
+  $('#demo-btn').hidden = state.phase !== 'sent';
 
   // Progress: one tick per question, plus the profile review at the end.
   const total = STEPS.length + 1;
@@ -562,6 +579,7 @@ const ICONS = {
   shield: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v6c0 4.4-3 7.7-7 9-4-1.3-7-4.6-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>',
   close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
   x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>',
+  info: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
   camera: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="9" cy="10.5" r="1.8"/><path d="M21 16l-5-5-8 9"/></svg>',
 };
 
@@ -869,6 +887,156 @@ sheetFile.addEventListener('change', async () => {
   }
 });
 
+/* ---------- scripted demo: Fletcher meets Fletcher ---------- */
+
+const demo = $('#demo');
+const demoBody = $('#demo-body');
+const demoFoot = $('#demo-foot');
+let demoRun = 0;
+let demoSkip = false;
+
+const TAGS = {
+  shared: { icon: () => ICONS.open, text: 'Shared' },
+  private: { icon: () => ICONS.locked, text: 'Kept private' },
+  off: { icon: () => ICONS.x, text: 'Never bring up' },
+};
+
+const demoWait = (ms) => (demoSkip ? Promise.resolve() : wait(ms));
+
+function demoScrollToEnd() {
+  demo.scrollTo({ top: demo.scrollHeight, behavior: demoSkip || reduceMotion ? 'auto' : 'smooth' });
+}
+
+/** Append one line to a demo conversation; `who` labels the first bubble of each run. */
+function demoLine(container, { side, who, text, tags = [] }) {
+  const last = container.querySelector(':scope > .msg:last-of-type');
+  const sameSide = last?.classList.contains(side === 'right' ? 'msg--me' : 'msg--bot');
+  if (!sameSide) container.insertAdjacentHTML('beforeend', `<div class="demo-who demo-who--${side}">${escapeHTML(who)}</div>`);
+  const el = document.createElement('div');
+  el.className = `msg ${side === 'right' ? 'msg--me' : 'msg--bot'}${demoSkip || reduceMotion ? '' : ' msg--enter'}`;
+  el.innerHTML = `<div class="bubble">${escapeHTML(text)}</div>`;
+  container.appendChild(el);
+  if (tags.length) {
+    container.insertAdjacentHTML(
+      'beforeend',
+      `<div class="demo-tags demo-tags--${side}">${tags
+        .map((t) => `<span class="demo-tag demo-tag--${t.kind}">${TAGS[t.kind].icon()}${TAGS[t.kind].text}: ${escapeHTML(t.label)}</span>`)
+        .join('')}</div>`,
+    );
+  }
+}
+
+async function demoTyping(container, side, ms) {
+  if (demoSkip) return;
+  const t = document.createElement('div');
+  t.className = `msg ${side === 'right' ? 'msg--me' : 'msg--bot'} msg--typing`;
+  t.innerHTML = '<div class="bubble"><span></span><span></span><span></span></div>';
+  container.appendChild(t);
+  demoScrollToEnd();
+  await demoWait(ms);
+  t.remove();
+}
+
+async function openDemo() {
+  const run = ++demoRun;
+  demoSkip = false;
+  const d = buildDemo(state.profile, isShared);
+  const theirs = `${d.match}’s Fletcher`;
+
+  demoBody.innerHTML = `
+    <p class="demo__banner">${ICONS.info}<span>Demo with a made-up person. Real matching isn’t live yet.</span></p>
+    <div class="demo__pair">
+      <div class="demo__agent"><div class="avatar avatar--sm">${cupidSVG()}</div><span>Your Fletcher</span></div>
+      <span class="demo__heart">${pixelHeartSVG()}</span>
+      <div class="demo__agent"><div class="avatar avatar--sm avatar--alt">${cupidSVG()}</div><span>${escapeHTML(theirs)}</span></div>
+    </div>
+    <div class="demo__chat" id="demo-chat"></div>
+    <div id="demo-after" hidden>
+      <section class="demo__verdict">
+        <p class="pf-eyebrow">Fletcher’s take</p>
+        <p>Looks promising! In the real app, you’d see ${escapeHTML(d.match)}’s profile next. You’re only introduced if you both say yes.</p>
+      </section>
+      <section class="demo__ask">
+        <h3 class="pf-group__title">Ask ${escapeHTML(theirs)}</h3>
+        <p class="pf-group__hint">Get answers before you ever talk.</p>
+        <div class="demo__qa" id="demo-qa"></div>
+        <div class="demo__questions" id="demo-questions"></div>
+      </section>
+    </div>`;
+  demoFoot.innerHTML = '<button class="cta__btn is-secondary" type="button" data-act="skip">Skip to the end</button>';
+
+  demo.classList.remove('is-closing');
+  demo.hidden = false;
+  demo.scrollTop = 0;
+  $('#demo-close').focus({ preventScroll: true });
+
+  if (!state.demoSeen) {
+    state.demoSeen = true;
+    save();
+    queueSubmission({ type: 'demo', comment: 'Watched the Fletcher-to-Fletcher demo' });
+  }
+
+  const chat = $('#demo-chat');
+  await demoWait(500);
+  for (const line of d.script) {
+    if (run !== demoRun) return;
+    const side = line.from === 'you' ? 'right' : 'left';
+    await demoTyping(chat, side, Math.min(1500, 500 + line.text.length * 12));
+    if (run !== demoRun) return;
+    demoLine(chat, { side, who: side === 'right' ? 'Your Fletcher' : theirs, text: line.text, tags: line.tags });
+    demoScrollToEnd();
+    await demoWait(350);
+  }
+  if (run !== demoRun) return;
+
+  // The conversation is over: show the verdict and the questions to ask.
+  $('#demo-after').hidden = false;
+  demoFoot.innerHTML = '<button class="cta__btn" type="button" data-act="close-demo">Back to chat</button>';
+  const qa = $('#demo-qa');
+  const box = $('#demo-questions');
+  d.questions.forEach((item) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.textContent = item.q;
+    b.addEventListener('click', async () => {
+      b.remove();
+      box.querySelectorAll('button').forEach((x) => (x.disabled = true));
+      demoSkip = false;
+      demoLine(qa, { side: 'right', who: 'You', text: item.q });
+      demoScrollToEnd();
+      await demoTyping(qa, 'left', 900);
+      if (run !== demoRun) return;
+      demoLine(qa, { side: 'left', who: theirs, text: item.a, tags: item.tags });
+      box.querySelectorAll('button').forEach((x) => (x.disabled = false));
+      demoScrollToEnd();
+    });
+    box.appendChild(b);
+  });
+  demoScrollToEnd();
+}
+
+function closeDemo() {
+  if (demo.hidden) return;
+  demoRun += 1;
+  demo.classList.add('is-closing');
+  setTimeout(() => {
+    demo.hidden = true;
+    demo.classList.remove('is-closing');
+  }, reduceMotion ? 0 : 280);
+}
+
+demoFoot.addEventListener('click', (e) => {
+  const act = e.target.closest('[data-act]')?.dataset.act;
+  if (act === 'skip') demoSkip = true;
+  if (act === 'close-demo') closeDemo();
+});
+$('#demo-close').addEventListener('click', closeDemo);
+$('#demo-btn').addEventListener('click', () => {
+  setMenu(false);
+  openDemo();
+});
+
 /* ---------- composer ---------- */
 
 function autosize() {
@@ -926,7 +1094,8 @@ document.addEventListener('click', () => setMenu(false));
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   setMenu(false);
-  if (editing) {
+  if (!demo.hidden) closeDemo();
+  else if (editing) {
     editing = null;
     renderSheet();
   } else closeSheet();

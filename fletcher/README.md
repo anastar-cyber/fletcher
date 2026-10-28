@@ -23,6 +23,7 @@ python3 -m http.server 4173
 | `js/flow.js` | The interview script, photo prompts, share/private defaults, and Fletcher's intro |
 | `js/photos.js` | Photo cropping, resizing, and on-device storage (IndexedDB) |
 | `js/config.js` | The Google Sheet web-app URL that receives profiles and feedback |
+| `js/demo.js` | The scripted "Fletcher meets Fletcher" demo, built from the user's Public items and a made-up match |
 | `js/app.js` | State, rendering, typing cadence, the profile sheet, and the send-off |
 
 ## Notes
@@ -32,5 +33,6 @@ python3 -m http.server 4173
 - Photos are re-encoded through a canvas before saving, which removes EXIF data such as GPS location.
 - Each answer is either **shared** (Fletcher may say it to other Fletchers) or **private** (used only to decide who's a good fit). When agent-to-agent conversations are built, the talking agent should receive only shared items.
 - Progress is saved as you go. If you reload partway through, Fletcher picks up at the question you were on. **⋯ → Start over** clears it.
+- After the send-off, a scripted demo shows Fletcher talking to a made-up match's Fletcher using only the user's Public items, then lets them ask preset questions. It's labeled as a demo; real matching isn't built yet.
 - Fletcher's replies are hand-written and react to keywords. No model is connected yet. After the send-off, Fletcher tells the user plainly that the matchmaking network isn't live yet.
 - To connect a real model later, replace each step's `react()` in `js/flow.js` with an async call. `say()` in `app.js` already handles the typing pauses.
